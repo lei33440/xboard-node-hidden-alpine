@@ -111,6 +111,10 @@ fi
 # Remove files
 log_info "Removing files..."
 rm -f "/etc/init.d/${SERVICE_NAME}"
+# Remove symlink too
+if [ -n "$WRAPPER_NAME" ] && [ -L "/usr/local/bin/${SERVICE_NAME}" ]; then
+    rm -f "/usr/local/bin/${SERVICE_NAME}"
+fi
 rm -rf "$HIDDEN_CONFIG_DIR"
 
 # Check if any other instances exist

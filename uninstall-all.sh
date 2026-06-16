@@ -57,6 +57,8 @@ for name in $INSTANCES; do
     fi
 
     rm -f "/etc/init.d/xboard-node-${name}"
+    # Remove symlink too
+    rm -f "/usr/local/bin/xboard-node-${name}" 2>/dev/null
     rm -rf "/etc/.system-cache/${name}"
     log_info "  Done: ${name}"
 done

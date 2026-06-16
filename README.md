@@ -208,6 +208,11 @@ tail -f /var/log/xboard-node-mypanel.log
 
 ## 更新日志
 
+### v1.0.1 (2026-06-16)
+- 🐛 修复 OpenRC supervise-daemon 服务名匹配问题
+- 🔗 创建与 service 同名的符号链接
+- 🔗 卸载脚本同步清理符号链接
+
 ### v1.0.0 (2026-06-08)
 - 🎉 首发版本
 - 🔒 进程名隐藏（crond-worker/ssh-agent）

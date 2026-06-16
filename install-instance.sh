@@ -231,13 +231,18 @@ echo "$WRAPPER_NAME" > "$HIDDEN_CONFIG_DIR/wrapper"
 # Create OpenRC service
 log_step "Creating OpenRC service..."
 mkdir -p /etc/init.d
+
+# 创建与 service 同名的符号链接（OpenRC 要求）
+# 这样 supervise-daemon 可以正确识别服务
+ln -sf "/usr/local/bin/${WRAPPER_NAME}" "/usr/local/bin/${SERVICE_NAME}"
+
 cat > "/etc/init.d/${SERVICE_NAME}" <<EOF
 #!/sbin/openrc-run
 
 name="\${RC_SVCNAME}"
 description="System Service - ${INSTANCE_NAME}"
 supervisor="supervise-daemon"
-command="/usr/local/bin/${WRAPPER_NAME}"
+command="/usr/local/bin/${SERVICE_NAME}"
 command_args=""
 pidfile="/run/\${RC_SVCNAME}.pid"
 output_log="/dev/null"
