@@ -154,14 +154,13 @@ mkdir -p "$HIDDEN_CONFIG_DIR"
 if [ ! -f "$BINARY_PATH" ]; then
     log_step "Downloading xboard-node..."
 
-    BASE_URLS=(
-        "https://github.com/cedar2025/Xboard-Node/releases"
-        "https://ghproxy.com/https://github.com/cedar2025/Xboard-Node/releases"
-        "https://mirror.ghproxy.com/https://github.com/cedar2025/Xboard-Node/releases"
-    )
+    # 使用空格分隔的字符串代替数组（兼容 sh）
+    BASE_URL_1="https://github.com/cedar2025/Xboard-Node/releases"
+    BASE_URL_2="https://ghproxy.com/https://github.com/cedar2025/Xboard-Node/releases"
+    BASE_URL_3="https://mirror.ghproxy.com/https://github.com/cedar2025/Xboard-Node/releases"
 
     DOWNLOADED=false
-    for BASE in "${BASE_URLS[@]}"; do
+    for BASE in "$BASE_URL_1" "$BASE_URL_2" "$BASE_URL_3"; do
         if [ "$INSTALL_VERSION" = "latest" ]; then
             DOWNLOAD_URL="$BASE/latest/download/xboard-node-linux-$ARCH_NAME"
         else
