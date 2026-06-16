@@ -208,6 +208,12 @@ tail -f /var/log/xboard-node-mypanel.log
 
 ## 更新日志
 
+### v1.0.3 (2026-06-16)
+- 🐛 修复重复安装同一实例时端口被 TIME_WAIT 占用导致启动失败
+- 🔧 启动失败时自动检测 "address already in use"，等待 65 秒后重试一次
+- 🧹 启动前彻底清理残留的 kernel-update / wrapper 进程
+- ✅ 一键部署更稳定，无需手动等 TIME_WAIT
+
 ### v1.0.2 (2026-06-16)
 - 🐛 修复 OpenRC 服务启动失败问题（supervise-daemon 报 "first argument must be" 错误）
 - 🔧 改用 start-stop-daemon 直接管理服务，兼容 Alpine 3.10+

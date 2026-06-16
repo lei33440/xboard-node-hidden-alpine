@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-VERSION="1.0.2"
+VERSION="1.0.3"
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
@@ -46,7 +46,7 @@ while [ $# -gt 0 ]; do
         --machine-id) MACHINE_ID="$2"; shift 2;;
         --version) INSTALL_VERSION="$2"; shift 2;;
         --help) cat <<'HELP'
-Xboard-Node Complete Hide Installer v1.0.2 (Alpine Linux)
+Xboard-Node Complete Hide Installer v1.0.3 (Alpine Linux)
 
 Usage:
   wget -N URL -O install.sh && sh install.sh --name INSTANCE --panel URL --token TOKEN --machine-id ID
@@ -280,10 +280,22 @@ chmod +x "/etc/init.d/${SERVICE_NAME}"
 log_step "Enabling service..."
 rc-update add "$SERVICE_NAME" default 2>/dev/null
 
-# Stop existing service if running
-log_step "Stopping existing service..."
+# Stop existing service if running (with thorough cleanup to avoid TIME_WAIT port conflicts)
+log_step "Stopping existing service (if any)..."
 /etc/init.d/$SERVICE_NAME stop 2>/dev/null || true
-sleep 1
+# Also kill any leftover kernel-update / wrapper processes from this instance
+ps aux | grep -E "kernel-update|/usr/local/bin/${SERVICE_NAME}|/usr/local/bin/${WRAPPER_NAME}" | grep -v grep | awk '{print $2}' | xargs -r kill -9 2>/dev/null
+rm -f "/run/${SERVICE_NAME}.pid"
+sleep 2
+
+# Check if the panel-configured port is in TIME_WAIT/CLOSE_WAIT (only matters on reinstall)
+# Read the first instance's port from the config we just wrote
+PANEL_PORT=""
+if [ -f "$HIDDEN_CONFIG_DIR/config.yml" ]; then
+    # Try to discover the listening port via the panel (best effort, ignore failure)
+    PANEL_PORT=$(grep -E '^\s*port:' "$HIDDEN_CONFIG_DIR/config.yml" 2>/dev/null | head -1 | awk '{print $2}' | tr -d '"' || true)
+fi
+# If we cannot read the port from local config, just attempt start; service will tell us
 
 # Start service
 log_step "Starting service..."
@@ -292,8 +304,37 @@ log_step "Starting service..."
 # Wait for startup
 sleep 3
 
-# Check status
+# Check status, with one automatic retry on bind failures (port TIME_WAIT scenario)
+SERVICE_OK=false
 if /etc/init.d/$SERVICE_NAME status >/dev/null 2>&1; then
+    SERVICE_OK=true
+else
+    # Check whether the failure is a TIME_WAIT port conflict by looking at the log
+    NEEDS_RETRY=false
+    if grep -q "address already in use" /var/log/${SERVICE_NAME}.log 2>/dev/null; then
+        NEEDS_RETRY=true
+    fi
+    # Also try ss/netstat as a fallback signal
+    if [ "$NEEDS_RETRY" = "false" ] && [ -n "$PANEL_PORT" ]; then
+        if netstat -tlnp 2>/dev/null | grep -q ":${PANEL_PORT} " && \
+           ! ps aux | grep -E "kernel-update" | grep -v grep | grep -q "$HIDDEN_CONFIG_DIR"; then
+            NEEDS_RETRY=true
+        fi
+    fi
+
+    if [ "$NEEDS_RETRY" = "true" ]; then
+        log_warn "Port appears to be in TIME_WAIT, waiting 65s for cleanup..."
+        sleep 65
+        log_info "Retrying start..."
+        /etc/init.d/$SERVICE_NAME start
+        sleep 3
+        if /etc/init.d/$SERVICE_NAME status >/dev/null 2>&1; then
+            SERVICE_OK=true
+        fi
+    fi
+fi
+
+if [ "$SERVICE_OK" = "true" ]; then
     echo ""
     echo "=============================================="
     log_info "Instance '${INSTANCE_NAME}' installed!"
@@ -315,5 +356,6 @@ if /etc/init.d/$SERVICE_NAME status >/dev/null 2>&1; then
 else
     echo ""
     log_error "Service failed to start"
+    log_error "Check logs: /var/log/${SERVICE_NAME}.log"
     exit 1
 fi
