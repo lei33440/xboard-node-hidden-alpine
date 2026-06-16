@@ -208,6 +208,11 @@ tail -f /var/log/xboard-node-mypanel.log
 
 ## 更新日志
 
+### v1.0.2 (2026-06-16)
+- 🐛 修复 OpenRC 服务启动失败问题（supervise-daemon 报 "first argument must be" 错误）
+- 🔧 改用 start-stop-daemon 直接管理服务，兼容 Alpine 3.10+
+- ✅ 优化 PID 文件管理，start/stop 更可靠
+
 ### v1.0.1 (2026-06-16)
 - 🐛 修复 OpenRC supervise-daemon 服务名匹配问题
 - 🔗 创建与 service 同名的符号链接

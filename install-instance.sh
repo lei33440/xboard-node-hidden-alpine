@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-VERSION="1.0.0"
+VERSION="1.0.2"
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
@@ -46,7 +46,7 @@ while [ $# -gt 0 ]; do
         --machine-id) MACHINE_ID="$2"; shift 2;;
         --version) INSTALL_VERSION="$2"; shift 2;;
         --help) cat <<'HELP'
-Xboard-Node Complete Hide Installer v1.0.0 (Alpine Linux)
+Xboard-Node Complete Hide Installer v1.0.2 (Alpine Linux)
 
 Usage:
   wget -N URL -O install.sh && sh install.sh --name INSTANCE --panel URL --token TOKEN --machine-id ID
@@ -241,9 +241,6 @@ cat > "/etc/init.d/${SERVICE_NAME}" <<EOF
 
 name="\${RC_SVCNAME}"
 description="System Service - ${INSTANCE_NAME}"
-supervisor="supervise-daemon"
-command="/usr/local/bin/${SERVICE_NAME}"
-command_args=""
 pidfile="/run/\${RC_SVCNAME}.pid"
 output_log="/dev/null"
 error_log="/dev/null"
@@ -255,13 +252,19 @@ depend() {
 
 start() {
     ebegin "Starting \${name}"
-    \$supervisor \$command
+    start-stop-daemon --start --background \\
+        --pidfile "\${pidfile}" \\
+        --make-pidfile \\
+        --exec "/usr/local/bin/${SERVICE_NAME}" \\
+        --stdout /dev/null \\
+        --stderr /dev/null
     eend \$?
 }
 
 stop() {
     ebegin "Stopping \${name}"
-    pkill -f "${WRAPPER_NAME}" 2>/dev/null
+    start-stop-daemon --stop --pidfile "\${pidfile}" --quiet
+    pkill -f "/usr/local/bin/${SERVICE_NAME}" 2>/dev/null
     sleep 1
     eend 0
 }
